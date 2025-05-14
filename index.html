@@ -38,6 +38,7 @@
 <br>
 <button onclick="getLocation()">Get Location</button>
 <p id="location"></p>
+<p id="locationStatus"></p>   
 <button onclick="getMicrophone()">Access Microphone</button>
 <p id="microphoneStatus"></p>
 
@@ -93,23 +94,41 @@
 
     // Function to get the user's current location
     function getLocation() {
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                function(position) {
-                    const lat = position.coords.latitude;
-                    const long = position.coords.longitude;
-                    document.getElementById('location').innerText = `Latitude: ${lat}, Longitude: ${long}`;
-                    document.getElementById('locationStatus').innerText = '✔️';
-                },
-                function(error) {
-                    alert("Location permission denied or failed.");
-                    document.getElementById('locationStatus').innerText = '❌';
+    const locationEl = document.getElementById('location');
+    const statusEl = document.getElementById('locationStatus');
+
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            function(position) {
+                const lat = position.coords.latitude;
+                const long = position.coords.longitude;
+                locationEl.innerText = `Latitude: ${lat}, Longitude: ${long}`;
+                statusEl.innerText = '✔️ Location retrieved successfully.';
+                statusEl.style.color = 'green';
+            },
+            function(error) {
+                let errorMsg = 'Location permission denied or failed.';
+                if (error.code === error.PERMISSION_DENIED) {
+                    errorMsg = '❌ Location permission was denied.';
+                } else if (error.code === error.POSITION_UNAVAILABLE) {
+                    errorMsg = '❌ Location information is unavailable.';
+                } else if (error.code === error.TIMEOUT) {
+                    errorMsg = '❌ The request to get user location timed out.';
+                } else {
+                    errorMsg = '❌ An unknown error occurred.';
                 }
-            );
-        } else {
-            alert("Geolocation is not supported by this browser.");
-        }
+
+                locationEl.innerText = 'Latitude: -, Longitude: -';
+                statusEl.innerText = errorMsg;
+                statusEl.style.color = 'red';
+            }
+        );
+    } else {
+        locationEl.innerText = 'Latitude: -, Longitude: -';
+        statusEl.innerText = '❌ Geolocation is not supported by this browser.';
+        statusEl.style.color = 'red';
     }
+}
 
     // Function to access the microphone
     async function getMicrophone() {

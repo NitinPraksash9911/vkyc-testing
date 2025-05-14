@@ -1,145 +1,55 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>WebView Permissions Demo</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    #loadingMessage { font-size: 18px; font-weight: bold; color: #333; }
-    #statusList { display: none; }
-    #loading { text-align: center; margin-top: 20px; }
-    video, img { width: 300px; height: auto; margin-top: 10px; display: none; }
-    button { margin: 10px 5px; padding: 8px 12px; }
-  </style>
-</head>
-<body>
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Location Fetch</title>
+	</head>
+	<body>
+		<button id="fetch-btn">Fetch Location</button>
+		<p id="location"></p>
+		<p id="error" style="color: red"></p>
 
-<h2>WebView Permissions Demo</h2>
+		<script>
+			const fetchWebLocationData = () => {
+				return new Promise((resolve, reject) => {
+					try {
+						if ("geolocation" in navigator) {
+							navigator.geolocation.getCurrentPosition(
+								(position) => {
+									resolve({
+										lat: position.coords.latitude,
+										long: position.coords.longitude,
+									});
+								},
+								(error) => {
+									reject(error.message || "Unknown geolocation error");
+								}
+							);
+						} else {
+							reject("WEB IMPLEMENTATION - Navigator API not supported");
+						}
+					} catch (error) {
+						reject("WEB IMPLEMENTATION - Location Fetch Error");
+					}
+				});
+			};
 
-<!-- Camera Preview and Buttons -->
-<video id="cameraPreview" autoplay></video>
-<br/>
-<button onclick="handleCamera()">Open Camera</button>
-<button onclick="captureImage()">Capture Image</button>
-<br/>
+			document
+				.getElementById("fetch-btn")
+				.addEventListener("click", async () => {
+					const locationPara = document.getElementById("location");
+					const errorPara = document.getElementById("error");
+					locationPara.textContent = "";
+					errorPara.textContent = "";
 
-<!-- Captured Image Display -->
-<img id="capturedImage"/>
-<br/>
-
-<!-- Other Controls -->
-<button onclick="getLocation()">Get Location</button>
-<p id="location"></p>
-
-<button onclick="getMicrophone()">Access Microphone</button>
-<p id="microphoneStatus"></p>
-
-<!-- External Link -->
-<button onclick="window.open('upswing-access-partner-edhs://?route=close-cbt', '_blank')">Open CBT Link</button>
-
-<!-- Permissions Status -->
-<h3>Permissions Status:</h3>
-<div id="loading"><p id="loadingMessage">Checking permissions...</p></div>
-<div id="statusList">
-  <ul>
-    <li>Camera: <span id="cameraStatus">❌</span></li>
-    <li>Location: <span id="locationStatus">❌</span></li>
-    <li>Microphone: <span id="microphoneStatusText">❌</span></li>
-  </ul>
-</div>
-
-<script>
-  let cameraStream = null;
-
-  async function handleCamera() {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      cameraStream = stream;
-      const video = document.getElementById('cameraPreview');
-      video.srcObject = stream;
-      video.style.display = 'block';
-      video.play();
-      updateStatus('cameraStatus', true);
-    } catch (e) {
-      alert("Camera access denied.");
-      updateStatus('cameraStatus', false);
-    }
-  }
-
-  function captureImage() {
-    if (!cameraStream) return alert("Please open the camera first.");
-    const video = document.getElementById('cameraPreview');
-    const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    canvas.getContext('2d').drawImage(video, 0, 0);
-    const imageUrl = canvas.toDataURL('image/png');
-    const img = document.getElementById('capturedImage');
-    img.src = imageUrl;
-    img.style.display = 'block';
-  }
-
-  function getLocation() {
-    if (!navigator.geolocation) {
-      alert("Geolocation is not supported.");
-      return updateStatus('locationStatus', false);
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      position => {
-        const { latitude, longitude } = position.coords;
-        document.getElementById('location').innerText = `Latitude: ${latitude}, Longitude: ${longitude}`;
-        updateStatus('locationStatus', true);
-      },
-      error => {
-        let message = "Failed to get location.";
-        if (error.code === error.PERMISSION_DENIED) message = "Location permission denied.";
-        alert(message);
-        updateStatus('locationStatus', false);
-      }
-    );
-  }
-
-  async function getMicrophone() {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      document.getElementById('microphoneStatus').innerText = 'Microphone access granted!';
-      updateStatus('microphoneStatusText', true);
-      stream.getTracks().forEach(track => track.stop());
-    } catch (e) {
-      alert("Microphone access denied.");
-      updateStatus('microphoneStatusText', false);
-    }
-  }
-
-  function updateStatus(id, granted) {
-    document.getElementById(id).innerText = granted ? '✔️' : '❌';
-  }
-
-  async function checkPermissions() {
-    const permissionMap = {
-      camera: 'cameraStatus',
-      geolocation: 'locationStatus',
-      microphone: 'microphoneStatusText',
-    };
-
-    for (const [perm, id] of Object.entries(permissionMap)) {
-      try {
-        const result = await navigator.permissions.query({ name: perm });
-        updateStatus(id, result.state === 'granted');
-      } catch (e) {
-        // Some browsers may not support querying certain permissions
-        updateStatus(id, false);
-      }
-    }
-
-    document.getElementById('loading').style.display = 'none';
-    document.getElementById('statusList').style.display = 'block';
-  }
-
-  window.onload = checkPermissions;
-</script>
-
-</body>
+					try {
+						const data = await fetchWebLocationData();
+						locationPara.textContent = `Latitude: ${data.lat}, Longitude: ${data.long}`;
+					} catch (err) {
+						errorPara.textContent = `Error: ${err}`;
+					}
+				});
+		</script>
+	</body>
 </html>

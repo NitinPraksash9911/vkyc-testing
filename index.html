@@ -1,152 +1,33 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebView Permissions Demo</title>
-    <style>
-        #loadingMessage {
-            font-size: 18px;
-            font-weight: bold;
-            color: #333;
-        }
-        #statusList {
-            display: none;
-        }
-        #loading {
-            display: block;
-            text-align: center;
-            margin-top: 20px;
-        }
-    </style>
-</head>
-<body>
-<h2>WebView Permissions Demo</h2>
-
-<!-- Camera Preview -->
-<video id="cameraPreview" style="width: 300px; height: auto; display: none;" autoplay></video>
-<br>
-
-<!-- Buttons -->
-<button onclick="openCamera()">Open Camera</button>
-<button onclick="captureImage()">Capture Image</button>
-
-<button onclick="window.open('upswing-access-partner-edhs://?route=close-cbt', '_blank')">Open CBT Link</button>
-
-<br>
-<img id="capturedImage" style="display:none; width: 300px; height: auto; margin-top: 10px;"/>
-<br>
-<button onclick="getLocation()">Get Location</button>
-<p id="location"></p>
-<button onclick="getMicrophone()">Access Microphone</button>
-<p id="microphoneStatus"></p>
-
-<!-- Permissions status list -->
-<h3>Permissions Status:</h3>
-<div id="loading">
-    <p id="loadingMessage">Checking permissions...</p>
-</div>
-
-<div id="statusList">
-    <ul>
-        <li>Camera: <span id="cameraStatus">❌</span></li>
-        <li>Location: <span id="locationStatus">❌</span></li>
-        <li>Microphone: <span id="microphoneStatusText">❌</span></li>
-    </ul>
-</div>
-
-<script>
-    let cameraStream = null;
-
-    // Function to open camera and show live preview
-    async function openCamera() {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-            cameraStream = stream;
-            const videoElement = document.getElementById('cameraPreview');
-            videoElement.srcObject = stream;
-            videoElement.style.display = 'block';
-            videoElement.play();
-            document.getElementById('cameraStatus').innerText = '✔️';
-        } catch (error) {
-            alert("Camera permission denied or failed.");
-            document.getElementById('cameraStatus').innerText = '❌';
-        }
-    }
-
-    // Function to capture image from camera
-    function captureImage() {
-        if (cameraStream) {
-            const videoElement = document.getElementById('cameraPreview');
-            const canvas = document.createElement('canvas');
-            canvas.width = videoElement.videoWidth;
-            canvas.height = videoElement.videoHeight;
-            const context = canvas.getContext('2d');
-            context.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
-            const dataUrl = canvas.toDataURL('image/png');
-            document.getElementById('capturedImage').src = dataUrl;
-            document.getElementById('capturedImage').style.display = 'block';
-        } else {
-            alert("Camera not initialized. Please open the camera first.");
-        }
-    }
-
-    // Function to get the user's current location
-    function getLocation() {
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                function(position) {
-                    const lat = position.coords.latitude;
-                    const long = position.coords.longitude;
-                    document.getElementById('location').innerText = `Latitude: ${lat}, Longitude: ${long}`;
-                    document.getElementById('locationStatus').innerText = '✔️';
-                },
-                function(error) {
-                    alert("Location permission denied or failed.");
-                    document.getElementById('locationStatus').innerText = '❌';
+<html>
+    <body>
+        
+        <h1>Click the button to get your coordinates.</h1>
+        
+        <button style="font-size: 60px;" onclick="getUserLocation()">Try It</button>
+        
+        <p id="demo"></p>
+        
+        <script>
+            var x = document.getElementById("demo");
+            
+            function getUserLocation() {
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(showPosition);
+                } else {
+                    x.innerHTML = "Geolocation is not supported by this browser.";
                 }
-            );
-        } else {
-            alert("Geolocation is not supported by this browser.");
-        }
-    }
-
-    // Function to access the microphone
-    async function getMicrophone() {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            document.getElementById('microphoneStatus').innerText = 'Microphone access granted!';
-            document.getElementById('microphoneStatusText').innerText = '✔️';
-            stream.getTracks().forEach(track => track.stop());
-        } catch (error) {
-            alert("Microphone permission denied or failed.");
-            document.getElementById('microphoneStatusText').innerText = '❌';
-        }
-    }
-
-    // Check permissions on page load
-    async function checkPermissions() {
-        const permissions = [
-            { name: 'camera', id: 'cameraStatus' },
-            { name: 'geolocation', id: 'locationStatus' },
-            { name: 'microphone', id: 'microphoneStatusText' },
-        ];
-
-        for (const permission of permissions) {
-            try {
-                const result = await navigator.permissions.query({ name: permission.name });
-                document.getElementById(permission.id).innerText = result.state === 'granted' ? '✔️' : '❌';
-            } catch (error) {
-                document.getElementById(permission.id).innerText = '❌';
             }
+        
+        function showPosition(position) {
+            getLocation(position.coords.latitude,position.coords.longitude);
         }
-
-        // Hide the loading message and show the status list
-        document.getElementById('loading').style.display = 'none';
-        document.getElementById('statusList').style.display = 'block';
-    }
-
-    window.onload = checkPermissions;
-</script>
-</body>
+        
+        function getLocation(lat,lng) {
+            x.innerHTML = "Lat: " +  lat+
+            "<br>Lng: " + lng;
+        }
+        </script>
+        
+    </body>
 </html>

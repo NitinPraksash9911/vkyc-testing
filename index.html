@@ -1,33 +1,145 @@
 <!DOCTYPE html>
-<html>
-    <body>
-        
-        <h1>Click the button to get your coordinates.</h1>
-        
-        <button style="font-size: 60px;" onclick="getUserLocation()">Try It</button>
-        
-        <p id="demo"></p>
-        
-        <script>
-            var x = document.getElementById("demo");
-            
-            function getUserLocation() {
-                if (navigator.geolocation) {
-                    navigator.geolocation.getCurrentPosition(showPosition);
-                } else {
-                    x.innerHTML = "Geolocation is not supported by this browser.";
-                }
-            }
-        
-        function showPosition(position) {
-            getLocation(position.coords.latitude,position.coords.longitude);
-        }
-        
-        function getLocation(lat,lng) {
-            x.innerHTML = "Lat: " +  lat+
-            "<br>Lng: " + lng;
-        }
-        </script>
-        
-    </body>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>WebView Permissions Demo</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    #loadingMessage { font-size: 18px; font-weight: bold; color: #333; }
+    #statusList { display: none; }
+    #loading { text-align: center; margin-top: 20px; }
+    video, img { width: 300px; height: auto; margin-top: 10px; display: none; }
+    button { margin: 10px 5px; padding: 8px 12px; }
+  </style>
+</head>
+<body>
+
+<h2>WebView Permissions Demo</h2>
+
+<!-- Camera Preview and Buttons -->
+<video id="cameraPreview" autoplay></video>
+<br/>
+<button onclick="handleCamera()">Open Camera</button>
+<button onclick="captureImage()">Capture Image</button>
+<br/>
+
+<!-- Captured Image Display -->
+<img id="capturedImage"/>
+<br/>
+
+<!-- Other Controls -->
+<button onclick="getLocation()">Get Location</button>
+<p id="location"></p>
+
+<button onclick="getMicrophone()">Access Microphone</button>
+<p id="microphoneStatus"></p>
+
+<!-- External Link -->
+<button onclick="window.open('upswing-access-partner-edhs://?route=close-cbt', '_blank')">Open CBT Link</button>
+
+<!-- Permissions Status -->
+<h3>Permissions Status:</h3>
+<div id="loading"><p id="loadingMessage">Checking permissions...</p></div>
+<div id="statusList">
+  <ul>
+    <li>Camera: <span id="cameraStatus">❌</span></li>
+    <li>Location: <span id="locationStatus">❌</span></li>
+    <li>Microphone: <span id="microphoneStatusText">❌</span></li>
+  </ul>
+</div>
+
+<script>
+  let cameraStream = null;
+
+  async function handleCamera() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      cameraStream = stream;
+      const video = document.getElementById('cameraPreview');
+      video.srcObject = stream;
+      video.style.display = 'block';
+      video.play();
+      updateStatus('cameraStatus', true);
+    } catch (e) {
+      alert("Camera access denied.");
+      updateStatus('cameraStatus', false);
+    }
+  }
+
+  function captureImage() {
+    if (!cameraStream) return alert("Please open the camera first.");
+    const video = document.getElementById('cameraPreview');
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+    const imageUrl = canvas.toDataURL('image/png');
+    const img = document.getElementById('capturedImage');
+    img.src = imageUrl;
+    img.style.display = 'block';
+  }
+
+  function getLocation() {
+    if (!navigator.geolocation) {
+      alert("Geolocation is not supported.");
+      return updateStatus('locationStatus', false);
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      position => {
+        const { latitude, longitude } = position.coords;
+        document.getElementById('location').innerText = `Latitude: ${latitude}, Longitude: ${longitude}`;
+        updateStatus('locationStatus', true);
+      },
+      error => {
+        let message = "Failed to get location.";
+        if (error.code === error.PERMISSION_DENIED) message = "Location permission denied.";
+        alert(message);
+        updateStatus('locationStatus', false);
+      }
+    );
+  }
+
+  async function getMicrophone() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      document.getElementById('microphoneStatus').innerText = 'Microphone access granted!';
+      updateStatus('microphoneStatusText', true);
+      stream.getTracks().forEach(track => track.stop());
+    } catch (e) {
+      alert("Microphone access denied.");
+      updateStatus('microphoneStatusText', false);
+    }
+  }
+
+  function updateStatus(id, granted) {
+    document.getElementById(id).innerText = granted ? '✔️' : '❌';
+  }
+
+  async function checkPermissions() {
+    const permissionMap = {
+      camera: 'cameraStatus',
+      geolocation: 'locationStatus',
+      microphone: 'microphoneStatusText',
+    };
+
+    for (const [perm, id] of Object.entries(permissionMap)) {
+      try {
+        const result = await navigator.permissions.query({ name: perm });
+        updateStatus(id, result.state === 'granted');
+      } catch (e) {
+        // Some browsers may not support querying certain permissions
+        updateStatus(id, false);
+      }
+    }
+
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('statusList').style.display = 'block';
+  }
+
+  window.onload = checkPermissions;
+</script>
+
+</body>
 </html>

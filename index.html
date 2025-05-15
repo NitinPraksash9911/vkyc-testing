@@ -189,6 +189,9 @@
       padding: 8px;
       border-radius: var(--border-radius);
       margin: 10px 0;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-wrap: break-word;
     }
     
     .button-group {
@@ -242,7 +245,7 @@
     
     <button onclick="getLocation()">Get Current Location</button>
     
-    <div id="location" class="coordinates">Latitude: -, Longitude: -</div>
+    <div id="locationDetails" class="coordinates">Location data will appear here</div>
     <div id="locationTextStatus" class="status-message">Location not yet requested</div>
   </div>
 
@@ -439,58 +442,58 @@
     }
 
     function getLocation() {
-      const locationEl = document.getElementById('location');
-      const statusTextEl = document.getElementById('locationTextStatus');
-      const statusIconEl = document.getElementById('locationStatusIcon');
+    const status = document.getElementById('locationTextStatus');
+    const output = document.getElementById('locationDetails');
 
-      // Clear previous status
-      statusTextEl.className = 'status-message';
-      statusTextEl.innerText = 'Requesting location...';
+    if (!navigator.geolocation) {
+      status.textContent = 'Geolocation is not supported by your browser';
+      status.className = 'status-message error';
+    } else {
+      status.textContent = 'Locating…';
+      status.className = 'status-message';
 
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          function (position) {
-            const lat = position.coords.latitude.toFixed(6);
-            const long = position.coords.longitude.toFixed(6);
-            locationEl.innerText = `Latitude: ${lat}, Longitude: ${long}`;
-            statusTextEl.innerText = 'Location retrieved successfully';
-            statusTextEl.className = 'status-message success';
-            
-            // Update both the text and icon status
-            updatePermissionStatus('geolocation', 'granted');
-            
-            // Refresh all permissions after location request
-            checkPermissions();
-          },
-          function (error) {
-            const errorMessages = {
-              1: 'Permission denied',
-              2: 'Position unavailable',
-              3: 'Request timeout'
-            };
-            const errorMsg = errorMessages[error.code] || error.message;
-            
-            locationEl.innerText = 'Latitude: -, Longitude: -';
-            statusTextEl.innerText = errorMsg;
-            statusTextEl.className = 'status-message error';
-            
-            // Update status based on error code
-            const permissionState = error.code === 1 ? 'denied' : 'prompt';
-            updatePermissionStatus('geolocation', permissionState);
-            
-            // Refresh all permissions after location request
-            checkPermissions();
-          },
-          { enableHighAccuracy: true, timeout: 10000 }
-        );
-      } else {
-        locationEl.innerText = 'Latitude: -, Longitude: -';
-        statusTextEl.innerText = 'Geolocation is not supported by this browser';
-        statusTextEl.className = 'status-message error';
-        statusIconEl.innerText = 'Unsupported';
-        statusIconEl.className = 'permission-status denied';
-      }
+      navigator.geolocation.getCurrentPosition(
+        position => {
+          const location = position.coords;
+          const timestamp = position.timestamp;
+          const mocked = position.mocked;
+          const provider = position.provider;
+
+          const details = {
+            latitude: location.latitude,
+            longitude: location.longitude,
+            accuracy: location.accuracy,
+            altitude: location.altitude ?? 'Unavailable',
+            altitudeAccuracy: location.altitudeAccuracy ?? 'Unavailable',
+            heading: location.heading >= 0 ? location.heading : -1,
+            speed: location.speed >= 0 ? location.speed : -1,
+            metadata: {
+              timestamp: timestamp,
+              provider: provider,
+              mocked: mocked // Add actual detection if applicable
+            }
+          };
+
+          // Display formatted output
+          output.innerHTML = `
+            <pre class="coordinates">${JSON.stringify(details, null, 2)}</pre>
+          `;
+
+          status.textContent = 'Location fetched successfully';
+          status.className = 'status-message success';
+        },
+        () => {
+          status.textContent = 'Unable to retrieve your location';
+          status.className = 'status-message error';
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0
+        }
+      );
     }
+  }
 
     async function getMicrophone() {
       const statusEl = document.getElementById('microphoneStatus');

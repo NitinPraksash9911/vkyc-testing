@@ -325,36 +325,44 @@
 
   <script>
     let cameraStream = null;
+    let permissionListeners = {};
 
     // Event listeners to register permission state changes
     function setupPermissionListeners() {
       try {
+        // Camera permission listener
         navigator.permissions.query({ name: 'camera' })
           .then(permissionStatus => {
-            permissionStatus.onchange = function() {
-              updatePermissionStatus('camera', this.state);
+            permissionListeners.camera = permissionStatus;
+            updatePermissionStatus('camera', permissionStatus.state);
+            permissionStatus.onchange = () => {
+              updatePermissionStatus('camera', permissionStatus.state);
             };
           })
           .catch(error => console.error("Error setting up camera listener:", error));
         
+        // Microphone permission listener
         navigator.permissions.query({ name: 'microphone' })
           .then(permissionStatus => {
-            permissionStatus.onchange = function() {
-              updatePermissionStatus('microphone', this.state);
+            permissionListeners.microphone = permissionStatus;
+            updatePermissionStatus('microphone', permissionStatus.state);
+            permissionStatus.onchange = () => {
+              updatePermissionStatus('microphone', permissionStatus.state);
             };
           })
           .catch(error => console.error("Error setting up microphone listener:", error));
         
-        // Some browsers use 'geolocation', others use 'location'
-        const geoPermName = 'geolocation';
-        navigator.permissions.query({ name: geoPermName })
+        // Geolocation permission listener
+        navigator.permissions.query({ name: 'geolocation' })
           .then(permissionStatus => {
-            permissionStatus.onchange = function() {
-              updatePermissionStatus('geolocation', this.state);
+            permissionListeners.geolocation = permissionStatus;
+            updatePermissionStatus('geolocation', permissionStatus.state);
+            permissionStatus.onchange = () => {
+              updatePermissionStatus('geolocation', permissionStatus.state);
             };
           })
           .catch(error => {
-            console.error(`Error setting up ${geoPermName} listener:`, error);
+            console.error("Error setting up geolocation listener:", error);
           });
       } catch (error) {
         console.error("Error setting up permission listeners:", error);
@@ -369,7 +377,7 @@
         elementId = 'cameraStatus';
       } else if (permission === 'microphone') {
         elementId = 'microphoneStatusIcon';
-      } else if (permission === 'geolocation' || permission === 'location') {
+      } else if (permission === 'geolocation') {
         elementId = 'locationStatusIcon';
       } else {
         return; // Unknown permission
@@ -409,13 +417,18 @@
         
         // Enable the capture button
         document.getElementById('captureBtn').disabled = false;
+        
+        // Update the permission status in case it changed
+        if (permissionListeners.camera) {
+          updatePermissionStatus('camera', permissionListeners.camera.state);
+        } else {
+          checkPermissions(); // Fallback if listener not set up
+        }
       } catch (error) {
-        alert("Camera permission denied or failed: " + error.message);
+        console.error("Camera error:", error);
         updatePermissionStatus('camera', 'denied');
+        alert("Camera permission denied or failed: " + error.message);
       }
-      
-      // Refresh all permissions after camera request
-      checkPermissions();
     }
 
     function captureImage() {
@@ -442,57 +455,64 @@
     }
 
     function getLocation() {
-    const status = document.getElementById('locationTextStatus');
-    const output = document.getElementById('locationDetails');
+      const status = document.getElementById('locationTextStatus');
+      const output = document.getElementById('locationDetails');
 
-    if (!navigator.geolocation) {
-      status.textContent = 'Geolocation is not supported by your browser';
-      status.className = 'status-message error';
-    } else {
-      status.textContent = 'Locating…';
-      status.className = 'status-message';
+      if (!navigator.geolocation) {
+        status.textContent = 'Geolocation is not supported by your browser';
+        status.className = 'status-message error';
+      } else {
+        status.textContent = 'Locating…';
+        status.className = 'status-message';
 
-      navigator.geolocation.getCurrentPosition(
-        position => {
-          const location = position.coords;
-          const timestamp = position.timestamp;
+        navigator.geolocation.getCurrentPosition(
+          position => {
+            const location = position.coords;
+            const timestamp = position.timestamp;
 
-          const details = {
-            latitude: location.latitude,
-            longitude: location.longitude,
-            accuracy: location.accuracy,
-            altitude: location.altitude ?? 'Unavailable',
-            altitudeAccuracy: location.altitudeAccuracy ?? 'Unavailable',
-            heading: location.heading >= 0 ? location.heading : -1,
-            speed: location.speed >= 0 ? location.speed : -1,
-            timestamp: timestamp,
-            // metadata: {
-            //   timestamp: timestamp,
-            //   provider: provider,
-            //   mocked: mocked // Add actual detection if applicable
-            // }
-          };
+            const details = {
+              latitude: location.latitude,
+              longitude: location.longitude,
+              accuracy: location.accuracy,
+              altitude: location.altitude ?? 'Unavailable',
+              altitudeAccuracy: location.altitudeAccuracy ?? 'Unavailable',
+              heading: location.heading >= 0 ? location.heading : -1,
+              speed: location.speed >= 0 ? location.speed : -1,
+              timestamp: timestamp,
+            };
 
-          // Display formatted output
-          output.innerHTML = `
-            <pre class="coordinates">${JSON.stringify(details, null, 2)}</pre>
-          `;
+            // Display formatted output
+            output.innerHTML = `<pre class="coordinates">${JSON.stringify(details, null, 2)}</pre>`;
 
-          status.textContent = 'Location fetched successfully';
-          status.className = 'status-message success';
-        },
-        () => {
-          status.textContent = 'Unable to retrieve your location';
-          status.className = 'status-message error';
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 0
-        }
-      );
+            status.textContent = 'Location fetched successfully';
+            status.className = 'status-message success';
+            
+            // Update the permission status in case it changed
+            if (permissionListeners.geolocation) {
+              updatePermissionStatus('geolocation', permissionListeners.geolocation.state);
+            } else {
+              checkPermissions(); // Fallback if listener not set up
+            }
+          },
+          error => {
+            status.textContent = 'Unable to retrieve your location: ' + error.message;
+            status.className = 'status-message error';
+            
+            // Update the permission status in case it changed
+            if (permissionListeners.geolocation) {
+              updatePermissionStatus('geolocation', permissionListeners.geolocation.state);
+            } else {
+              checkPermissions(); // Fallback if listener not set up
+            }
+          },
+          {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
+          }
+        );
+      }
     }
-  }
 
     async function getMicrophone() {
       const statusEl = document.getElementById('microphoneStatus');
@@ -511,8 +531,12 @@
         // Stop the microphone stream after granting access
         stream.getTracks().forEach(track => track.stop());
         
-        // Refresh all permissions after microphone request
-        checkPermissions();
+        // Update the permission status in case it changed
+        if (permissionListeners.microphone) {
+          updatePermissionStatus('microphone', permissionListeners.microphone.state);
+        } else {
+          checkPermissions(); // Fallback if listener not set up
+        }
       } catch (error) {
         statusEl.innerText = "Microphone permission denied: " + error.message;
         statusEl.className = 'status-message error';
@@ -520,8 +544,12 @@
         // Update the microphone status
         updatePermissionStatus('microphone', 'denied');
         
-        // Refresh all permissions after microphone request
-        checkPermissions();
+        // Update the permission status in case it changed
+        if (permissionListeners.microphone) {
+          updatePermissionStatus('microphone', permissionListeners.microphone.state);
+        } else {
+          checkPermissions(); // Fallback if listener not set up
+        }
       }
     }
 
@@ -536,15 +564,10 @@
       document.getElementById('loading').style.display = 'block';
       document.getElementById('statusList').style.display = 'none';
       
-      // Small delay to show loading indicator
-      setTimeout(async () => {
+      try {
         for (const permission of permissions) {
           try {
-            // Note: The 'name' parameter in permissions.query may need to be adjusted
-            // based on browser implementation (some use different names)
-            const permissionName = permission.name;
-            
-            const result = await navigator.permissions.query({ name: permissionName });
+            const result = await navigator.permissions.query({ name: permission.name });
             const statusEl = document.getElementById(permission.id);
             
             if (result.state === 'granted') {
@@ -557,16 +580,24 @@
               statusEl.innerText = 'Denied';
               statusEl.className = 'permission-status denied';
             }
+            
+            // Store the permission status for change tracking
+            if (!permissionListeners[permission.name]) {
+              permissionListeners[permission.name] = result;
+              result.onchange = () => {
+                updatePermissionStatus(permission.name, result.state);
+              };
+            }
           } catch (error) {
             console.error(`Error checking ${permission.name} permission:`, error);
             document.getElementById(permission.id).innerText = 'Unknown';
           }
         }
-        
+      } finally {
         // Hide loading indicator and show results
         document.getElementById('loading').style.display = 'none';
         document.getElementById('statusList').style.display = 'block';
-      }, 300);
+      }
     }
 
     // Special check for camera stream status to ensure button state matches reality
@@ -580,11 +611,11 @@
 
     // Initialize everything when the page loads
     window.onload = function() {
-      // Initial permission check
-      checkPermissions();
-      
-      // Set up permission change listeners
+      // Set up permission change listeners first
       setupPermissionListeners();
+      
+      // Then do an initial permission check
+      checkPermissions();
       
       // Check camera button state periodically
       setInterval(checkCameraStreamStatus, 1000);

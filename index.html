@@ -455,9 +455,9 @@
       navigator.geolocation.getCurrentPosition(
         position => {
           const location = position.coords;
-          const timestamp = position.timestamp;
-          const mocked = position.mocked;
-          const provider = position.provider;
+          const timestamp = position.metadata.timestamp;
+          const mocked = position.metadata.mocked;
+          const provider = position.metadata.provider;
 
           const details = {
             latitude: location.latitude,

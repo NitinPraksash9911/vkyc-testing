@@ -165,6 +165,10 @@
       color: var(--error-color);
     }
     
+    .prompt {
+      color: var(--warning-color);
+    }
+    
     .tools-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -281,17 +285,17 @@
       <div class="permission-item">
         <span class="permission-icon">📷</span>
         <span class="permission-name">Camera</span>
-        <span class="permission-status denied" id="cameraStatus">Not granted</span>
+        <span class="permission-status" id="cameraStatus">Checking...</span>
       </div>
       <div class="permission-item">
         <span class="permission-icon">📍</span>
         <span class="permission-name">Location</span>
-        <span class="permission-status denied" id="locationStatusIcon">Not granted</span>
+        <span class="permission-status" id="locationStatusIcon">Checking...</span>
       </div>
       <div class="permission-item">
         <span class="permission-icon">🎤</span>
         <span class="permission-name">Microphone</span>
-        <span class="permission-status denied" id="microphoneStatusIcon">Not granted</span>
+        <span class="permission-status" id="microphoneStatusIcon">Checking...</span>
       </div>
     </div>
     
@@ -327,48 +331,6 @@
     let cameraStream = null;
     let permissionListeners = {};
 
-    // Event listeners to register permission state changes
-    function setupPermissionListeners() {
-      try {
-        // Camera permission listener
-        navigator.permissions.query({ name: 'camera' })
-          .then(permissionStatus => {
-            permissionListeners.camera = permissionStatus;
-            updatePermissionStatus('camera', permissionStatus.state);
-            permissionStatus.onchange = () => {
-              updatePermissionStatus('camera', permissionStatus.state);
-            };
-          })
-          .catch(error => console.error("Error setting up camera listener:", error));
-        
-        // Microphone permission listener
-        navigator.permissions.query({ name: 'microphone' })
-          .then(permissionStatus => {
-            permissionListeners.microphone = permissionStatus;
-            updatePermissionStatus('microphone', permissionStatus.state);
-            permissionStatus.onchange = () => {
-              updatePermissionStatus('microphone', permissionStatus.state);
-            };
-          })
-          .catch(error => console.error("Error setting up microphone listener:", error));
-        
-        // Geolocation permission listener
-        navigator.permissions.query({ name: 'geolocation' })
-          .then(permissionStatus => {
-            permissionListeners.geolocation = permissionStatus;
-            updatePermissionStatus('geolocation', permissionStatus.state);
-            permissionStatus.onchange = () => {
-              updatePermissionStatus('geolocation', permissionStatus.state);
-            };
-          })
-          .catch(error => {
-            console.error("Error setting up geolocation listener:", error);
-          });
-      } catch (error) {
-        console.error("Error setting up permission listeners:", error);
-      }
-    }
-
     // Update permission status in the UI
     function updatePermissionStatus(permission, state) {
       let elementId;
@@ -395,10 +357,53 @@
           }
         } else if (state === 'prompt') {
           statusEl.innerText = 'Not requested';
-          statusEl.className = 'permission-status';
+          statusEl.className = 'permission-status prompt';
         } else {
           statusEl.innerText = 'Denied';
           statusEl.className = 'permission-status denied';
+        }
+      }
+    }
+
+    // Real-time monitoring of permissions
+    async function setupPermissionMonitoring() {
+      const permissions = [
+        { name: 'camera', id: 'cameraStatus' },
+        { name: 'geolocation', id: 'locationStatusIcon' },
+        { name: 'microphone', id: 'microphoneStatusIcon' }
+      ];
+      
+      for (const permission of permissions) {
+        try {
+          const status = await navigator.permissions.query({ name: permission.name });
+          
+          // Update the initial status
+          updatePermissionStatus(permission.name, status.state);
+          
+          // Add event listener for changes
+          status.onchange = function() {
+            updatePermissionStatus(permission.name, this.state);
+            
+            // Store the permission status for reference
+            permissionListeners[permission.name] = this;
+            
+            // Special handling for camera permissions
+            if (permission.name === 'camera' && this.state !== 'granted') {
+              if (cameraStream) {
+                cameraStream.getTracks().forEach(track => track.stop());
+                cameraStream = null;
+                document.getElementById('cameraPreview').style.display = 'none';
+                document.getElementById('captureBtn').disabled = true;
+              }
+            }
+          };
+          
+          // Store the permission status for reference
+          permissionListeners[permission.name] = status;
+          
+        } catch (error) {
+          console.error(`Error setting up monitoring for ${permission.name}:`, error);
+          document.getElementById(permission.id).innerText = 'Unknown';
         }
       }
     }
@@ -412,22 +417,18 @@
         videoElement.style.display = 'block';
         videoElement.play();
         
-        // Update the camera status immediately
-        updatePermissionStatus('camera', 'granted');
-        
         // Enable the capture button
         document.getElementById('captureBtn').disabled = false;
         
-        // Update the permission status in case it changed
-        if (permissionListeners.camera) {
-          updatePermissionStatus('camera', permissionListeners.camera.state);
-        } else {
-          checkPermissions(); // Fallback if listener not set up
-        }
+        // Get the current status after granting permission
+        const cameraStatus = permissionListeners.camera || await navigator.permissions.query({ name: 'camera' });
+        updatePermissionStatus('camera', cameraStatus.state);
       } catch (error) {
         console.error("Camera error:", error);
-        updatePermissionStatus('camera', 'denied');
         alert("Camera permission denied or failed: " + error.message);
+        
+        // Update the camera status to denied
+        updatePermissionStatus('camera', 'denied');
       }
     }
 
@@ -487,23 +488,21 @@
             status.textContent = 'Location fetched successfully';
             status.className = 'status-message success';
             
-            // Update the permission status in case it changed
-            if (permissionListeners.geolocation) {
-              updatePermissionStatus('geolocation', permissionListeners.geolocation.state);
-            } else {
-              checkPermissions(); // Fallback if listener not set up
-            }
+            // Check permission status after successful access
+            navigator.permissions.query({ name: 'geolocation' })
+              .then(permStatus => {
+                updatePermissionStatus('geolocation', permStatus.state);
+              });
           },
           error => {
             status.textContent = 'Unable to retrieve your location: ' + error.message;
             status.className = 'status-message error';
             
-            // Update the permission status in case it changed
-            if (permissionListeners.geolocation) {
-              updatePermissionStatus('geolocation', permissionListeners.geolocation.state);
-            } else {
-              checkPermissions(); // Fallback if listener not set up
-            }
+            // Check if permission was denied
+            navigator.permissions.query({ name: 'geolocation' })
+              .then(permStatus => {
+                updatePermissionStatus('geolocation', permStatus.state);
+              });
           },
           {
             enableHighAccuracy: true,
@@ -525,31 +524,18 @@
         statusEl.innerText = 'Microphone access granted!';
         statusEl.className = 'status-message success';
         
-        // Update the microphone status
-        updatePermissionStatus('microphone', 'granted');
-        
         // Stop the microphone stream after granting access
         stream.getTracks().forEach(track => track.stop());
         
-        // Update the permission status in case it changed
-        if (permissionListeners.microphone) {
-          updatePermissionStatus('microphone', permissionListeners.microphone.state);
-        } else {
-          checkPermissions(); // Fallback if listener not set up
-        }
+        // Get current microphone permission status
+        const micStatus = permissionListeners.microphone || await navigator.permissions.query({ name: 'microphone' });
+        updatePermissionStatus('microphone', micStatus.state);
       } catch (error) {
         statusEl.innerText = "Microphone permission denied: " + error.message;
         statusEl.className = 'status-message error';
         
-        // Update the microphone status
+        // Update the microphone status to denied
         updatePermissionStatus('microphone', 'denied');
-        
-        // Update the permission status in case it changed
-        if (permissionListeners.microphone) {
-          updatePermissionStatus('microphone', permissionListeners.microphone.state);
-        } else {
-          checkPermissions(); // Fallback if listener not set up
-        }
       }
     }
 
@@ -560,33 +546,23 @@
         { name: 'microphone', id: 'microphoneStatusIcon' },
       ];
 
-      // Show loading spinner briefly during check
+      // Show loading spinner during check
       document.getElementById('loading').style.display = 'block';
       document.getElementById('statusList').style.display = 'none';
       
       try {
+        // Check each permission
         for (const permission of permissions) {
           try {
-            const result = await navigator.permissions.query({ name: permission.name });
-            const statusEl = document.getElementById(permission.id);
+            const permStatus = await navigator.permissions.query({ name: permission.name });
+            updatePermissionStatus(permission.name, permStatus.state);
             
-            if (result.state === 'granted') {
-              statusEl.innerText = 'Granted';
-              statusEl.className = 'permission-status granted';
-            } else if (result.state === 'prompt') {
-              statusEl.innerText = 'Not requested';
-              statusEl.className = 'permission-status';
-            } else {
-              statusEl.innerText = 'Denied';
-              statusEl.className = 'permission-status denied';
-            }
-            
-            // Store the permission status for change tracking
+            // Set up event listener for this permission if not already done
             if (!permissionListeners[permission.name]) {
-              permissionListeners[permission.name] = result;
-              result.onchange = () => {
-                updatePermissionStatus(permission.name, result.state);
+              permStatus.onchange = function() {
+                updatePermissionStatus(permission.name, this.state);
               };
+              permissionListeners[permission.name] = permStatus;
             }
           } catch (error) {
             console.error(`Error checking ${permission.name} permission:`, error);
@@ -600,7 +576,7 @@
       }
     }
 
-    // Special check for camera stream status to ensure button state matches reality
+    // Special check for camera stream status
     function checkCameraStreamStatus() {
       if (cameraStream && cameraStream.active) {
         document.getElementById('captureBtn').disabled = false;
@@ -610,16 +586,20 @@
     }
 
     // Initialize everything when the page loads
-    window.onload = function() {
-      // Set up permission change listeners first
-      setupPermissionListeners();
-      
-      // Then do an initial permission check
-      checkPermissions();
-      
-      // Check camera button state periodically
-      setInterval(checkCameraStreamStatus, 1000);
-    };
+    window.addEventListener('DOMContentLoaded', async function() {
+      try {
+        // First, check the initial permission status
+        await checkPermissions();
+        
+        // Then set up continuous monitoring
+        await setupPermissionMonitoring();
+        
+        // Check camera button state periodically
+        setInterval(checkCameraStreamStatus, 1000);
+      } catch (error) {
+        console.error("Error during initialization:", error);
+      }
+    });
   </script>
 </body>
 </html>

@@ -455,9 +455,7 @@
       navigator.geolocation.getCurrentPosition(
         position => {
           const location = position.coords;
-          const timestamp = position.metadata.timestamp;
-          const mocked = position.metadata.mocked;
-          const provider = position.metadata.provider;
+          const timestamp = position.timestamp;
 
           const details = {
             latitude: location.latitude,
@@ -467,11 +465,12 @@
             altitudeAccuracy: location.altitudeAccuracy ?? 'Unavailable',
             heading: location.heading >= 0 ? location.heading : -1,
             speed: location.speed >= 0 ? location.speed : -1,
-            metadata: {
-              timestamp: timestamp,
-              provider: provider,
-              mocked: mocked // Add actual detection if applicable
-            }
+            timestamp: timestamp,
+            // metadata: {
+            //   timestamp: timestamp,
+            //   provider: provider,
+            //   mocked: mocked // Add actual detection if applicable
+            // }
           };
 
           // Display formatted output

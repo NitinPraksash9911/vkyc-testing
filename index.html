@@ -38,7 +38,7 @@
 <br>
 <button onclick="getLocation()">Get Location</button>
 <p id="location"></p>
-<p id="locationStatus"></p>   
+<p id="locationTextStatus"></p>   
 <button onclick="getMicrophone()">Access Microphone</button>
 <p id="microphoneStatus"></p>
 
@@ -51,7 +51,7 @@
 <div id="statusList">
     <ul>
         <li>Camera: <span id="cameraStatus">❌</span></li>
-        <li>Location: <span id="locationStatus">❌</span></li>
+        <li>Location: <span id="locationStatusIcon">❌</span></li>
         <li>Microphone: <span id="microphoneStatusText">❌</span></li>
     </ul>
 </div>
@@ -95,7 +95,8 @@
     // Function to get the user's current location
     function getLocation() {
     const locationEl = document.getElementById('location');
-    const statusEl = document.getElementById('locationStatus');
+    const statusTextEl = document.getElementById('locationTextStatus'); // updated
+    const statusIconEl = document.getElementById('locationStatusIcon'); // updated
 
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
@@ -103,21 +104,23 @@
                 const lat = position.coords.latitude;
                 const long = position.coords.longitude;
                 locationEl.innerText = `Latitude: ${lat}, Longitude: ${long}`;
-                statusEl.innerText = '✔️ Location retrieved successfully.';
-                statusEl.style.color = 'green';
+                statusTextEl.innerText = '✔️ Location retrieved successfully.';
+                statusTextEl.style.color = 'green';
+                statusIconEl.innerText = '✔️';
             },
             function(error) {
-                // Use the message provided by the system
                 const errorMsg = `❌ ${error.message}`;
                 locationEl.innerText = 'Latitude: -, Longitude: -';
-                statusEl.innerText = errorMsg;
-                statusEl.style.color = 'red';
+                statusTextEl.innerText = errorMsg;
+                statusTextEl.style.color = 'red';
+                statusIconEl.innerText = '❌';
             }
         );
     } else {
         locationEl.innerText = 'Latitude: -, Longitude: -';
-        statusEl.innerText = '❌ Geolocation is not supported by this browser.';
-        statusEl.style.color = 'red';
+        statusTextEl.innerText = '❌ Geolocation is not supported by this browser.';
+        statusTextEl.style.color = 'red';
+        statusIconEl.innerText = '❌';
     }
 }
 

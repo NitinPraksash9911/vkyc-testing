@@ -172,12 +172,12 @@
     <p>This button opens <strong>Microsoft SMS Organizer</strong> with phone number and message already filled in.</p>
 
     <div class="button-group">
-      <button class="sms-btn" onclick="sendSMS()">
+      <!-- <button class="sms-btn" onclick="sendSMS()">
         Send SMS Now (Pre-filled)
-      </button>
+      </button> -->
 
-      <button class="fallback-btn" onclick="sendSMSFallback1()">Fallback: sms: scheme</button>
-      <button class="fallback-btn" onclick="sendSMSFallback2()">Fallback: Force Organizer</button>
+      <!-- <button class="fallback-btn" onclick="sendSMSOrganizer()">Fallback: sms: scheme</button> -->
+      <button class="fallback-btn" onclick="sendSMSFallback2()"> SMS Organizer</button>
     </div>
 
     <div style="background:#f0f0f0; padding:12px; border-radius:8px; font-size:0.95em;">
@@ -254,7 +254,7 @@
     }
 
     // Fallback 2 – Forces Microsoft SMS Organizer even if not default
-    function sendSMSFallback2() {
+    function sendSMSOrganizer() {
       const phone = "9876543210";
       const message = "Your OTP is 123456 – WebView Test Successful!";
       const intentUri = `intent://send/${phone}#Intent;scheme=smsto;package=com.microsoft.android.smsorganizer;S.sms_body=${encodeURIComponent(message)};S.address=${phone};end`;

@@ -176,13 +176,13 @@
         Send SMS Now (Pre-filled)
       </button> -->
 
-      <!-- <button class="fallback-btn" onclick="sendSMSOrganizer()">Fallback: sms: scheme</button> -->
-      <button class="fallback-btn" onclick="sendSMSFallback2()"> SMS Organizer</button>
+      <button class="fallback-btn" onclick="sendSMSOrganizer()">Fallback: sms: scheme</button>
+      <!-- <button class="fallback-btn" onclick="sendSMSFallback2()"> SMS Organizer</button> -->
     </div>
 
     <div style="background:#f0f0f0; padding:12px; border-radius:8px; font-size:0.95em;">
-      <strong>Phone:</strong> 9876543210<br>
-      <strong>Message:</strong> Your OTP is <span style="color:#d32f2f; font-weight:bold;">123456</span> – WebView Test Successful!
+      <strong>Phone:</strong> +918859167328<br>
+      <strong>Message:</strong>PROUSW MTI4NjRkMWYt.......</span>
     </div>
   </div>
 
@@ -255,8 +255,8 @@
 
     // Fallback 2 – Forces Microsoft SMS Organizer even if not default
     function sendSMSOrganizer() {
-      const phone = "9876543210";
-      const message = "Your OTP is 123456 – WebView Test Successful!";
+      const phone = "+918859167328";
+      const message = "PROUSW MTI4NjRkMWYtOGE0NC00YjU3LThiNjAtNmExZTc5MmZlYjkzFb-0_uvE-GAn_ovWAu-iGQHsb4kMOs-6CLxvLO6NMSc=";
       const intentUri = `intent://send/${phone}#Intent;scheme=smsto;package=com.microsoft.android.smsorganizer;S.sms_body=${encodeURIComponent(message)};S.address=${phone};end`;
       window.location.href = intentUri;
     }
